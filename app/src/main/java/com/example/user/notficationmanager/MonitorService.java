@@ -1,5 +1,6 @@
 package com.example.user.notficationmanager;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import android.content.BroadcastReceiver;
@@ -83,6 +84,17 @@ public class MonitorService extends NotificationListenerService {
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
+        LOG("New notification:");
+        // API 21 LOG("   group-key: " + sbn.getGroupKey());
+        // API 21 LOG("   key:       " + sbn.getKey());
+        // API 24 try {LOG("   override-group-key: " + sbn.getOverrideGroupKey());} catch (java.lang.NoSuchMethodError e) {}
+        LOG("   pkg-name:  " + sbn.getPackageName());
+        LOG("   tag:       " + sbn.getTag());
+        LOG("   as-string: " + sbn.toString());
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        LOG("   posted:    " + df.format(sbn.getPostTime()));
+        LOG("   id:        " + Integer.toString(sbn.getId()));
+        // API 21 LOG("   user:      " + sbn.getUser().toString());
         UpdateCurrentNotifications();
         posted_notification = sbn;
     }

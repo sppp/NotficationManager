@@ -11,6 +11,9 @@ android {
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
+    repositories {
+        maven { url 'http://repo1.maven.org/maven2' }
+    }
     buildTypes {
         release {
             minifyEnabled false
