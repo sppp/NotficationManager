@@ -94,6 +94,14 @@
                         android:id="@+id/debug_cancel_all"
                         android:onClick="buttonOnClicked"
                         android:layout_weight="1" />
+
+                    <Button
+                        android:text="Release Queue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:id="@+id/debug_release_queue"
+                        android:onClick="buttonOnClicked"
+                        android:layout_weight="1" />
                 </LinearLayout>
             </TableRow>
 

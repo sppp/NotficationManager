@@ -1,8 +1,9 @@
 package com.example.user.notficationmanager;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
+
+import android.app.Notification;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -12,8 +13,12 @@ import android.os.IBinder;
 import android.os.Message;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
+import android.support.v4.app.NotificationCompat;
 import android.text.TextUtils;
 import android.util.Log;
+
+
+
 
 public class MonitorService extends NotificationListenerService {
     private static final String TAG = "MonitorService";
@@ -25,6 +30,9 @@ public class MonitorService extends NotificationListenerService {
     public static StatusBarNotification posted_notification;
     public static StatusBarNotification removed_notification;
     private CancelNotificationReceiver receiver = new CancelNotificationReceiver();
+
+    public static List<QueuedNotification> queued_nots = new ArrayList<QueuedNotification>();
+    public static MonitorService self;
 
     private Handler monitor_handler = new Handler() {
         @Override
@@ -53,8 +61,12 @@ public class MonitorService extends NotificationListenerService {
                             StatusBarNotification sbnn = GetCurrentNotifications()[current_notification_count - 1];
                             cancelNotification(sbnn.getPackageName(), sbnn.getTag(), sbnn.getId());
                         }
-                    } else if (TextUtils.equals(command, "cancel_all")) {
+                    }
+                    else if (TextUtils.equals(command, "cancel_all")) {
                         cancelAllNotifications();
+                    }
+                    else if (TextUtils.equals(command, "release_queue")) {
+                        MonitorService.self.ReleaseQueue();
                     }
                 }
             }
@@ -64,6 +76,7 @@ public class MonitorService extends NotificationListenerService {
 
     @Override
     public void onCreate() {
+        self = this;
         super.onCreate();
         IntentFilter filter = new IntentFilter();
         filter.addAction(ACTION_NLS_CONTROL);
@@ -84,20 +97,16 @@ public class MonitorService extends NotificationListenerService {
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
-        LOG("New notification:");
-        // API 21 LOG("   group-key: " + sbn.getGroupKey());
-        // API 21 LOG("   key:       " + sbn.getKey());
-        // API 24 try {LOG("   override-group-key: " + sbn.getOverrideGroupKey());} catch (java.lang.NoSuchMethodError e) {}
-        LOG("   pkg-name:  " + sbn.getPackageName());
-        LOG("   tag:       " + sbn.getTag());
-        LOG("   as-string: " + sbn.toString());
-        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        LOG("   posted:    " + df.format(sbn.getPostTime()));
-        LOG("   id:        " + Integer.toString(sbn.getId()));
-        // API 21 LOG("   user:      " + sbn.getUser().toString());
+
+
+        QueuedNotification qn = new QueuedNotification();
+        qn.Set(sbn);
+        queued_nots.add(qn);
+
         UpdateCurrentNotifications();
         posted_notification = sbn;
     }
+
 
     @Override
     public void onNotificationRemoved(StatusBarNotification sbn) {
@@ -125,7 +134,24 @@ public class MonitorService extends NotificationListenerService {
         return current_notifications.get(0);
     }
 
-    private void LOG(Object object) {
+    public void ReleaseQueue() {
+        List<Notification> release_list = new ArrayList<Notification>();
+        for (int i = 0; i < queued_nots.size(); i++) {
+            QueuedNotification qn = queued_nots.get(i);
+            Notification not = qn.Get();
+            release_list.add(not);
+        }
+
+        android.app.NotificationManager nmgr = (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+
+        for (int i = 0; i < release_list.size(); i++) {
+            nmgr.notify((int)System.currentTimeMillis(), release_list.get(i));
+        }
+
+        queued_nots.clear();
+
+    }
+    private static void LOG(Object object) {
         Log.i(TAG, TAG_PRE+object);
     }
 

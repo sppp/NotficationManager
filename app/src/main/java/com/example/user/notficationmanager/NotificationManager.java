@@ -85,6 +85,9 @@ public class NotificationManager extends Activity {
             case R.id.debug_notification_settings:
                 OpenNotificationAccess();
                 break;
+            case R.id.debug_release_queue:
+                DebugCommand(this, "release_queue");
+                break;
             default:
                 break;
         }
@@ -119,7 +122,7 @@ public class NotificationManager extends Activity {
         nmgr.notify((int)System.currentTimeMillis(), ncomp.build());
     }
 
-    private void DebugCancelNotification(Context context, boolean is_cancel_all) {
+    /*private void DebugCancelNotification(Context context, boolean is_cancel_all) {
         Intent intent = new Intent();
         intent.setAction(MonitorService.ACTION_NLS_CONTROL);
         if (is_cancel_all) {
@@ -127,6 +130,13 @@ public class NotificationManager extends Activity {
         }else {
             intent.putExtra("command", "cancel_last");
         }
+        context.sendBroadcast(intent);
+    }*/
+
+    private void DebugCommand(Context context, String cmd) {
+        Intent intent = new Intent();
+        intent.setAction(MonitorService.ACTION_NLS_CONTROL);
+        intent.putExtra("command", cmd);
         context.sendBroadcast(intent);
     }
 
@@ -156,7 +166,7 @@ public class NotificationManager extends Activity {
 
     private void RemoveLastNotification() {
         if (is_enabled) {
-            DebugCancelNotification(this,false);
+            DebugCommand(this, "cancel_last");
         }else {
             text_view.setTextColor(Color.RED);
             text_view.setText("Please Enable Notification Access");
@@ -165,7 +175,7 @@ public class NotificationManager extends Activity {
 
     private void ClearAllNotifications() {
         if (is_enabled) {
-            DebugCancelNotification(this,true);
+            DebugCommand(this, "cancel_all");
         }else {
             text_view.setTextColor(Color.RED);
             text_view.setText("Please Enable Notification Access");
