@@ -125,7 +125,7 @@
                 <TimePicker
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:id="@+id/beginning" />
+                    android:id="@+id/begin" />
 
             </TableRow>
 
@@ -164,42 +164,49 @@
                         android:text="Monday"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:onClick="buttonOnClicked"
                         android:id="@+id/monday" />
 
                     <CheckBox
                         android:text="Tuesday"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:onClick="buttonOnClicked"
                         android:id="@+id/tuesday" />
 
                     <CheckBox
                         android:text="Wednesday"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:onClick="buttonOnClicked"
                         android:id="@+id/wednesday" />
 
                     <CheckBox
                         android:text="Thursday"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:onClick="buttonOnClicked"
                         android:id="@+id/thursday" />
 
                     <CheckBox
                         android:text="Friday"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:onClick="buttonOnClicked"
                         android:id="@+id/friday" />
 
                     <CheckBox
                         android:text="Saturday"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:onClick="buttonOnClicked"
                         android:id="@+id/saturday" />
 
                     <CheckBox
                         android:text="Sunday"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:onClick="buttonOnClicked"
                         android:id="@+id/sunday" />
                 </LinearLayout>
             </TableRow>
@@ -212,6 +219,7 @@
                     android:text="Enable"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:onClick="buttonOnClicked"
                     android:id="@+id/enable" />
             </TableRow>
         </TableLayout>
