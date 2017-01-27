@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.example.user.notificationmanager.MainActivity"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:id="@+id/mainLayout"
+    android:weightSum="1">
+
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="220dp"
+        android:layout_height="wrap_content">
+
+        <EditText
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="time"
+            android:ems="10"
+            android:id="@+id/editDelay"
+
+            android:hint="00:00"
+            android:textColor="#000000"
+            android:textSize="70dp"
+            android:gravity="center"
+            android:padding="0dp"
+            android:layout_marginBottom="10dp"
+            android:paddingBottom="0dp"
+            android:paddingLeft="0dp"
+            android:paddingRight="0dp"
+            android:layout_gravity="center"
+            android:layout_weight="0.04" />
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:gravity="center"
+            android:id="@+id/dateLayout"
+            android:layout_marginTop="5dp"
+            android:layout_weight="0.02">
+
+            <EditText
+                android:focusable="false"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:inputType="date"
+                android:ems="10"
+                android:id="@+id/editFirstDate"
+                android:hint="9/9/1999"
+                android:layout_weight="1"
+                android:layout_marginRight="10dp"
+                android:gravity="center_vertical|center_horizontal" />
+
+            <EditText
+                android:focusable="false"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:inputType="date"
+                android:ems="10"
+                android:id="@+id/editSecondDate"
+                android:layout_weight="1"
+                android:hint="9/9/1999"
+                android:gravity="center_vertical|center_horizontal" />
+
+        </LinearLayout>
+    </LinearLayout>
+
+    <Button
+        android:text="Default options"
+        android:layout_width="220dp"
+        android:layout_height="70dp"
+        android:id="@+id/btnDefaultOptions"
+        android:layout_marginTop="30dp"
+        android:onClick="showPopup"
+        android:background="#006699"
+        android:textColor="@android:color/background_light" />
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="220dp"
+        android:layout_height="70dp"
+        android:layout_marginTop="20dp"
+        android:id="@+id/delayButtonsLayout">
+
+        <Button
+            android:text="On"
+            android:layout_width="wrap_content"
+            android:layout_height="70dp"
+            android:id="@+id/btnDelayOn"
+            android:layout_weight="1"
+            android:textColor="#006699" />
+
+        <Button
+            android:text="Off"
+            android:layout_width="wrap_content"
+            android:layout_height="70dp"
+            android:id="@+id/btnDelayOff"
+            android:layout_weight="1"
+            android:textColor="#ffffff"
+            android:background="#006699" />
+    </LinearLayout>
+
+    <TextView
+        android:text="Manage apps"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/txtManageApps"
+        android:layout_marginTop="60dp"
+        android:clickable="true" />
+</LinearLayout>
