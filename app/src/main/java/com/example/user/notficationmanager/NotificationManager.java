@@ -55,8 +55,14 @@ public class NotificationManager extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        text_view = (TextView) findViewById(R.id.debug_log);
+
+        if (false) {
+            setContentView(R.layout.activity_main);
+        }
+        else {
+            setContentView(R.layout.startup);
+            text_view = (TextView) findViewById(R.id.debug_log);
+        }
     }
 
     @Override
