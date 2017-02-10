@@ -7,6 +7,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import android.app.Notification;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -36,14 +37,33 @@ public class MonitorService extends NotificationListenerService {
     public static List<QueuedNotification> queued_nots = new ArrayList<QueuedNotification>();
     public static MonitorService self;
 
-    private boolean is_enabled = false;
-    public int begin_hour = 0;
-    public int begin_minute = 0;
-    public int end_hour = 23;
-    public int end_minute = 55;
+    private static boolean is_enabled = false;
+    public static int begin_hour = 0;
+    public static int begin_minute = 0;
+    public static int end_hour = 23;
+    public static int end_minute = 55;
 
-    public boolean[] enabled_day = new boolean[7];
+    public static boolean[] enabled_day = new boolean[7];
 
+
+    static boolean IsDelaying() {
+        if (!is_enabled)
+            return false;
+
+        // Check if it is time to delay notifications
+        Calendar c = Calendar.getInstance();
+        int hour = c.get(Calendar.HOUR_OF_DAY);
+        int minute = c.get(Calendar.MINUTE);
+        int wday = c.get(Calendar.DAY_OF_WEEK);
+
+        if (    enabled_day[wday] == true &&
+                (hour > begin_hour || (hour == begin_hour && minute >= begin_minute) ) &&
+                (hour < end_hour || (hour == end_hour && minute < end_minute) ) ) {
+            return true;
+        }
+
+        return false;
+    }
     // TIMER
 
     // constant
@@ -71,6 +91,7 @@ public class MonitorService extends NotificationListenerService {
         }
     }
 
+
     public void Refresh() {
         LOG("MonitorService Refresh");
 
@@ -87,6 +108,46 @@ public class MonitorService extends NotificationListenerService {
                 ReleaseQueue();
             }
         }
+
+        RefreshStatusIcon();
+    }
+
+    private Notification icon;
+    private int icon_id = 0;
+
+    public void RefreshStatusIcon() {
+        if (is_enabled) {
+            ShowIcon();
+        } else {
+            HideIcon();
+        }
+    }
+
+    public void HideIcon() {
+        if (icon == null) return;
+
+        android.app.NotificationManager notificationManager = (android.app.NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
+        notificationManager.cancel(icon_id);
+
+        icon_id = 0;
+        icon = null;
+    }
+
+    public void ShowIcon() {
+        if (icon != null) return;
+
+        android.app.NotificationManager nmgr = (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        android.support.v7.app.NotificationCompat.Builder ncomp = new android.support.v7.app.NotificationCompat.Builder(this);
+        ncomp.setContentTitle("Notification delaying is enabled");
+        ncomp.setContentText("");
+        ncomp.setTicker("Notification delaying is enabled");
+        ncomp.setSmallIcon(android.R.drawable.sym_def_app_icon);
+        ncomp.setAutoCancel(false);
+        ncomp.setOngoing(true);
+
+        icon = ncomp.build();
+        icon_id = (int)System.currentTimeMillis();
+        nmgr.notify(icon_id, icon);
     }
 
     public void CancelLast() {
@@ -114,6 +175,8 @@ public class MonitorService extends NotificationListenerService {
         }
 
         is_enabled = enabled;
+
+        RefreshStatusIcon();
     }
 
     @Override
@@ -159,25 +222,19 @@ public class MonitorService extends NotificationListenerService {
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
 
-        if (is_enabled) {
+        // Skip our service's notification
+        if (sbn.getId() == icon_id)
+            return;
 
-            // Check if it is time to delay notifications
-            Calendar c = Calendar.getInstance();
-            int hour = c.get(Calendar.HOUR_OF_DAY);
-            int minute = c.get(Calendar.MINUTE);
-            int wday = c.get(Calendar.DAY_OF_WEEK);
 
-            if (    enabled_day[wday] == true &&
-                    (hour > begin_hour || (hour == begin_hour && minute >= begin_minute) ) &&
-                    (hour < end_hour || (hour == end_hour && minute < end_minute) ) ) {
-                QueuedNotification qn = new QueuedNotification();
-                qn.Set(sbn);
-                queued_nots.add(qn);
+        if (IsDelaying()) {
+            QueuedNotification qn = new QueuedNotification();
+            qn.Set(sbn);
+            queued_nots.add(qn);
 
-                // Cancel notification
-                android.app.NotificationManager notificationManager = (android.app.NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
-                notificationManager.cancel(sbn.getId());
-            }
+            // Cancel notification
+            android.app.NotificationManager notificationManager = (android.app.NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
+            notificationManager.cancel(sbn.getId());
         }
 
         UpdateCurrentNotifications();

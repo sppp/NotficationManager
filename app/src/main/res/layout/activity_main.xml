@@ -1,145 +1,176 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/NotificationManager"
+    tools:context="com.example.user.notficationmanager.MainActivity"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.example.user.notficationmanager.NotificationManager">
+    android:gravity="center"
+    android:orientation="vertical"
+    android:id="@+id/mainLayout"
+    android:weightSum="1">
 
 
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_alignParentStart="true"
-        android:id="@+id/scroll">
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="220dp"
+        android:layout_height="wrap_content">
 
-        <TableLayout
+        <EditText
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_alignParentTop="true"
-            android:layout_alignParentStart="true"
-            android:id="@+id/table">
+            android:inputType="time"
+            android:ems="10"
+            android:id="@+id/countdown"
+
+            android:hint="23:59"
+            android:gravity="center"
+            android:padding="0dp"
+            android:layout_marginBottom="10dp"
+            android:paddingBottom="0dp"
+            android:paddingLeft="0dp"
+            android:paddingRight="0dp"
+            android:layout_gravity="center"
+            android:editable="false"
+            android:clickable="false"
+            android:focusable="false"
+            android:textSize="36sp" />
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:gravity="center"
+            android:id="@+id/dateLayout"
+            android:layout_marginTop="5dp"
+            android:layout_weight="0.02">
+
+            <EditText
+                android:focusable="false"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:inputType="date"
+                android:ems="10"
+                android:id="@+id/begin"
+                android:hint="0:00"
+                android:layout_weight="1"
+                android:layout_marginRight="10dp"
+                android:gravity="center_vertical|center_horizontal" />
+
+            <EditText
+                android:focusable="false"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:inputType="date"
+                android:ems="10"
+                android:id="@+id/end"
+                android:layout_weight="1"
+                android:hint="23.59"
+                android:gravity="center_vertical|center_horizontal" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_weight="0.04">
+
+            <ToggleButton
+                android:text="M"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/monday"
+                android:layout_weight="1"
+                android:onClick="buttonOnClicked"
+                android:textOff="M"
+                android:textOn="M" />
+
+            <ToggleButton
+                android:text="T"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/tuesday"
+                android:layout_weight="1"
+                android:onClick="buttonOnClicked"
+                android:textOff="T"
+                android:textOn="T" />
+
+            <ToggleButton
+                android:text="W"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/wednesday"
+                android:layout_weight="1"
+                android:onClick="buttonOnClicked"
+                android:textOff="W"
+                android:textOn="W" />
+
+            <ToggleButton
+                android:text="T"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/thursday"
+                android:layout_weight="1"
+                android:onClick="buttonOnClicked"
+                android:textOff="T"
+                android:textOn="T" />
+
+            <ToggleButton
+                android:text="F"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/friday"
+                android:layout_weight="1"
+                android:onClick="buttonOnClicked"
+                android:textOff="F"
+                android:textOn="F" />
+
+            <ToggleButton
+                android:text="S"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/saturday"
+                android:layout_weight="1"
+                android:onClick="buttonOnClicked"
+                android:textOff="S"
+                android:textOn="S" />
+
+            <ToggleButton
+                android:text="S"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/sunday"
+                android:layout_weight="1"
+                android:onClick="buttonOnClicked"
+                android:textOff="S"
+                android:textOn="S" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <Button
+        android:text="Delay Now"
+        android:layout_width="220dp"
+        android:layout_height="70dp"
+        android:id="@+id/delay_now"
+        android:layout_marginTop="30dp"
+        android:onClick="showPopup" />
+
+    <ToggleButton
+        android:layout_width="220dp"
+        android:layout_height="70dp"
+        android:id="@+id/enable"
+        android:onClick="buttonOnClicked"
+        android:textOff="Enable"
+        android:textOn="Disable" />
 
 
-
-            <TableRow
-                android:layout_width="match_parent"
-                android:layout_height="match_parent" >
-
-                <TextView
-                    android:text="Time of day to start"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:id="@+id/label_begin"
-                    android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
-
-            </TableRow>
-
-            <TableRow
-                android:layout_width="match_parent"
-                android:layout_height="match_parent" >
-
-                <TimePicker
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:id="@+id/begin" />
-
-            </TableRow>
-
-            <TableRow
-                android:layout_width="match_parent"
-                android:layout_height="match_parent" >
-
-                <TextView
-                    android:text="Time of day to stop"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:id="@+id/label_end"
-                    android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
-            </TableRow>
-
-            <TableRow
-                android:layout_width="match_parent"
-                android:layout_height="match_parent" >
-
-                <TimePicker
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:id="@+id/end" />
-            </TableRow>
-
-            <TableRow
-                android:layout_width="match_parent"
-                android:layout_height="match_parent" >
-
-                <LinearLayout
-                    android:orientation="vertical"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent">
-
-                    <CheckBox
-                        android:text="Monday"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:onClick="buttonOnClicked"
-                        android:id="@+id/monday" />
-
-                    <CheckBox
-                        android:text="Tuesday"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:onClick="buttonOnClicked"
-                        android:id="@+id/tuesday" />
-
-                    <CheckBox
-                        android:text="Wednesday"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:onClick="buttonOnClicked"
-                        android:id="@+id/wednesday" />
-
-                    <CheckBox
-                        android:text="Thursday"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:onClick="buttonOnClicked"
-                        android:id="@+id/thursday" />
-
-                    <CheckBox
-                        android:text="Friday"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:onClick="buttonOnClicked"
-                        android:id="@+id/friday" />
-
-                    <CheckBox
-                        android:text="Saturday"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:onClick="buttonOnClicked"
-                        android:id="@+id/saturday" />
-
-                    <CheckBox
-                        android:text="Sunday"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:onClick="buttonOnClicked"
-                        android:id="@+id/sunday" />
-                </LinearLayout>
-            </TableRow>
-
-            <TableRow
-                android:layout_width="match_parent"
-                android:layout_height="match_parent" >
-
-                <Switch
-                    android:text="Enable"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:onClick="buttonOnClicked"
-                    android:id="@+id/enable" />
-            </TableRow>
-        </TableLayout>
-    </ScrollView>
-
-</RelativeLayout>
+    <TextView
+        android:text="Press Here To Answer Our Survey"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/start_survey"
+        android:layout_marginTop="60dp"
+        android:clickable="true" />
+</LinearLayout>
