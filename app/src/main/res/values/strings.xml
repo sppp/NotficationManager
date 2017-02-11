@@ -1,3 +1,26 @@
 <resources>
-    <string name="app_name">Notfication Manager</string>
+    <string name="app_name">Notification Delayer</string>
+    <string name="app_starting">Notification Delayer is starting</string>
+    <string name="enable_access">Please enable NotficationManager access</string>
+    <string name="reenable_access">Please DISABLE and re-enable NotficationManager access. Unfortunately the new version requires that.</string>
+    <string name="delay_now">Delay Now</string>
+    <string name="enable_delay">Enable</string>
+    <string name="disable_delay">Disable</string>
+    <string name="please_answer_survey">Press Here To Answer Our Survey</string>
+    <string name="short_monday">M</string>
+    <string name="short_tuesday">T</string>
+    <string name="short_wednesday">W</string>
+    <string name="short_thursday">T</string>
+    <string name="short_friday">F</string>
+    <string name="short_saturday">S</string>
+    <string name="short_sunday">S</string>
+    <string name="menu_help">Help</string>
+    <string name="menu_perm">Notification Listener Permissions</string>
+    <string name="popup_15">15 minutes</string>
+    <string name="popup_30">30 minutes</string>
+    <string name="popup_60">1 hour</string>
+
+
+
+
 </resources>

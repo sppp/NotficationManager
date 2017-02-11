@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:title="15 minutes"
+    <item android:title="@string/popup_15"
         android:id="@+id/popup_first"/>
-    <item android:title="30 minutes"
+    <item android:title="@string/popup_30"
         android:id="@+id/popup_second"/>
-    <item android:title="1 hour"
+    <item android:title="@string/popup_60"
         android:id="@+id/popup_third"/>
 </menu>

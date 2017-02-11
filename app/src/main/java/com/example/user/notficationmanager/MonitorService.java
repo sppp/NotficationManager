@@ -38,28 +38,65 @@ public class MonitorService extends NotificationListenerService {
     public static MonitorService self;
 
     private static boolean is_enabled = false;
+    private static boolean enable_timer = false;
+
     public static int begin_hour = 0;
     public static int begin_minute = 0;
     public static int end_hour = 23;
     public static int end_minute = 55;
+    public static int countdown_begin_hour = 23;
+    public static int countdown_begin_minute = 55;
+    public static int countdown_end_hour = 23;
+    public static int countdown_end_minute = 59;
+    public static int countdown_end_second = 59;
 
     public static boolean[] enabled_day = new boolean[7];
 
+    static int GetCountdown() {
+        if (!is_enabled) return 0;
+
+        Calendar c = Calendar.getInstance();
+        int second = c.get(Calendar.SECOND);
+        int minute = c.get(Calendar.MINUTE);
+        int hour = c.get(Calendar.HOUR_OF_DAY);
+        int second_of_day = hour * 60 * 60 + minute * 60 + second;
+        int end_of_day = enable_timer == false ?
+                end_hour * 60 * 60 + end_minute * 60:
+                countdown_end_hour * 60 * 60 + countdown_end_minute * 60 + countdown_end_second;
+
+        int seconds_left = end_of_day - second_of_day;
+        if (seconds_left < 0) seconds_left += 24 * 60 * 60;
+
+
+        return seconds_left;
+    }
 
     static boolean IsDelaying() {
         if (!is_enabled)
             return false;
 
-        // Check if it is time to delay notifications
         Calendar c = Calendar.getInstance();
         int hour = c.get(Calendar.HOUR_OF_DAY);
         int minute = c.get(Calendar.MINUTE);
-        int wday = c.get(Calendar.DAY_OF_WEEK);
 
-        if (    enabled_day[wday] == true &&
-                (hour > begin_hour || (hour == begin_hour && minute >= begin_minute) ) &&
-                (hour < end_hour || (hour == end_hour && minute < end_minute) ) ) {
-            return true;
+        if (enable_timer == false) {
+
+            // Check if it is time to delay notifications
+            int wday = c.get(Calendar.DAY_OF_WEEK);
+            if (wday == 7) wday = 0;
+
+            if (enabled_day[wday] == true &&
+                    (hour > begin_hour || (hour == begin_hour && minute >= begin_minute)) &&
+                    (hour < end_hour || (hour == end_hour && minute < end_minute))) {
+                return true;
+            }
+        }
+        else {
+            if (
+                    (hour > countdown_begin_hour || (hour == countdown_begin_hour && minute >= countdown_begin_minute)) &&
+                    (hour < countdown_end_hour || (hour == countdown_end_hour && minute < countdown_end_minute))) {
+                return true;
+            }
         }
 
         return false;
@@ -96,27 +133,22 @@ public class MonitorService extends NotificationListenerService {
         LOG("MonitorService Refresh");
 
         if (is_enabled) {
-
-            // Check if it is time to release notifications
-            Calendar c = Calendar.getInstance();
-            int hour = c.get(Calendar.HOUR_OF_DAY);
-            int minute = c.get(Calendar.MINUTE);
-            int wday = c.get(Calendar.DAY_OF_WEEK);
-            if (    enabled_day[wday] == false ||
-                    hour > end_hour ||
-                    (hour == end_hour && minute >= end_minute) ) {
+            if (!IsDelaying()) {
                 ReleaseQueue();
             }
         }
 
         RefreshStatusIcon();
+
+        if (MainActivity.self != null)
+            MainActivity.self.RefreshCountdown();
     }
 
     private Notification icon;
     private int icon_id = 0;
 
     public void RefreshStatusIcon() {
-        if (is_enabled) {
+        if (IsDelaying()) {
             ShowIcon();
         } else {
             HideIcon();
@@ -141,7 +173,7 @@ public class MonitorService extends NotificationListenerService {
         ncomp.setContentTitle("Notification delaying is enabled");
         ncomp.setContentText("");
         ncomp.setTicker("Notification delaying is enabled");
-        ncomp.setSmallIcon(android.R.drawable.sym_def_app_icon);
+        ncomp.setSmallIcon(R.drawable.status_bar_icon);
         ncomp.setAutoCancel(false);
         ncomp.setOngoing(true);
 
@@ -162,8 +194,34 @@ public class MonitorService extends NotificationListenerService {
         cancelAllNotifications();
     }
 
+    public void StartTimer(int minutes) {
+        is_enabled = true;
+        enable_timer = true;
+
+        Calendar c = Calendar.getInstance();
+        int second = c.get(Calendar.SECOND);
+        int minute = c.get(Calendar.MINUTE);
+        int hour = c.get(Calendar.HOUR_OF_DAY);
+
+        int second_of_day  = second + minute * 60 + hour * 60 * 60;
+        second_of_day += minutes * 60;
+
+        while (second_of_day  >= 24*60*60) second_of_day  -= 24*60*60;
+
+        countdown_begin_hour = hour;
+        countdown_begin_minute = minute;
+        countdown_end_hour = second_of_day / 60 / 60;
+        countdown_end_minute = (second_of_day / 60) % 60;
+        countdown_end_second = second_of_day % 60;
+
+        RefreshStatusIcon();
+    }
+
     public void Enable(boolean enabled) {
-        if (is_enabled == enabled) return; // Useless
+        if (is_enabled == enabled && enable_timer == false) return; // Useless
+
+        // Don't enable countdown
+        enable_timer = false;
 
         // Queuing was enabled, release the queue
         if (is_enabled) {
@@ -194,7 +252,8 @@ public class MonitorService extends NotificationListenerService {
         UpdateCurrentNotifications();
 
         // Add setting slots days
-        for (int i = 0; i < 7; i++) enabled_day[i] = false;
+        for (int i = 0; i < 2; i++) enabled_day[i] = false;
+        for (int i = 2; i < 7; i++) enabled_day[i] = true;
 
         // Start periodical refresher
 
@@ -207,6 +266,13 @@ public class MonitorService extends NotificationListenerService {
         }
         // schedule task
         mTimer.scheduleAtFixedRate(new TimeDisplayTimerTask(), 0, NOTIFY_INTERVAL);
+
+        // Test listening a notification.
+        // After updating to new version, the previous permission is not transferred to the new app,
+        // and requires user to re-enable the permission.
+        if (MainActivity.self != null)
+            MainActivity.self.TestListenerAndConfirm();
+
     }
 
     @Override
@@ -251,6 +317,10 @@ public class MonitorService extends NotificationListenerService {
     private void UpdateCurrentNotifications() {
         try {
             StatusBarNotification[] activeNos = getActiveNotifications();
+            if (activeNos == null) {
+                LOG("ERROR: activeNos == null");
+                return;
+            }
             if (current_notifications.size() == 0) {
                 current_notifications.add(null);
             }

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Huomautusten Viivästyttäjä</string>
+    <string name="app_starting">Huomautusten Viivästyttäjä käynnistyy</string>
+    <string name="delay_now">Viivytä Nyt</string>
+    <string name="disable_delay">Pois Päältä</string>
+    <string name="enable_delay">Päälle</string>
+    <string name="enable_access">Ohjelma tarvitsisi luvan seurata huomautuksia toimiakseen.</string>
+    <string name="menu_help">Apua</string>
+    <string name="menu_perm">Huomautusten seuraajien lupa-asetukset</string>
+    <string name="please_answer_survey">Paina tähän vastataksesi tekijöiden kyselyyn</string>
+    <string name="popup_15">15 minuuttia</string>
+    <string name="popup_30">30 minuuttia</string>
+    <string name="popup_60">1 tunti</string>
+    <string name="reenable_access">Ole hyvä, ja käytä lupa-asetusta pois päältä ja sitten kytke se takaisin. Valitettavasti uusi versio vaatii tämän kömpelön operaation.</string>
+    <string name="short_friday">P</string>
+    <string name="short_monday">M</string>
+    <string name="short_saturday">L</string>
+    <string name="short_sunday">S</string>
+    <string name="short_thursday">T</string>
+    <string name="short_tuesday">T</string>
+    <string name="short_wednesday">K</string>
+</resources>
