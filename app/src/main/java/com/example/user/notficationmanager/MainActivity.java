@@ -5,6 +5,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.media.Rating;
 import android.os.Handler;
 import android.provider.Settings;
 import android.service.notification.StatusBarNotification;
@@ -23,14 +24,33 @@ import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.RatingBar;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.TimePicker;
 import android.widget.Toast;
 import android.widget.ToggleButton;
+import android.provider.Settings.Secure;
 
 import com.example.user.notficationmanager.R;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+
+import javax.net.ssl.HttpsURLConnection;
 
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener, PopupMenu.OnMenuItemClickListener {
@@ -48,7 +68,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private int end_hour = 23;
     private int end_minute = 59;
     private int view_type = 0;
-
 
     private static final String TAG = "Notification Delayer";
     private static final String TAG_PRE = "["+MainActivity.class.getSimpleName()+"] ";
@@ -91,7 +110,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             // Call this function again
             countdown_handler.postDelayed(new Runnable() {
                 public void run() {
-                    MainActivity.self.RefreshCountdown();
+                    if (MainActivity.self != null)
+                        MainActivity.self.RefreshCountdown();
                 }
             }, countdown_delay);
         }
@@ -104,8 +124,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         self = this;
 
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
 
+        SetMainView();
+    }
+
+    private void SetMainView() {
+        setContentView(R.layout.activity_main);
 
         countdown = (EditText) findViewById(R.id.countdown);
         countdown.setOnClickListener(this);
@@ -169,6 +193,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         RefreshData();
     }
 
+
+    private Thread survey_thread;
+
     @Override
     public void onClick(View view) {
         if (view == this.begin) {
@@ -180,8 +207,25 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             new TimePickerDialog(MainActivity.this, time, end_hour, end_minute, true).show();
         }
         else if (view == this.start_survey) {
-            //Intent intent = new Intent(getBaseContext(), AppMenuActivity.class);
-            //startActivity(intent);
+            survey_thread = new Thread(new Runnable() {
+
+                @Override
+                public void run() {
+                    try  {
+                        StartSurvey();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+
+            survey_thread.start();
+        }
+        else if (view.getId() == R.id.answer_survey) {
+            AnswerSurvey();
+        }
+        else if (view.getId() == R.id.survey_back) {
+            SetMainView();
         }
     }
 
@@ -206,6 +250,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         begin_minute = MonitorService.begin_minute;
         end_hour = MonitorService.end_hour;
         end_minute = MonitorService.end_minute;
+
+        begin.setText(Integer.toString(begin_hour) + ":" + (begin_minute < 10 ? "0" : "") + Integer.toString(begin_minute));
+        end.setText(Integer.toString(end_hour) + ":" + (end_minute < 10 ? "0" : "") + Integer.toString(end_minute));
 
         ToggleButton toggle;
         toggle = (ToggleButton) findViewById(R.id.monday);
@@ -352,6 +399,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     public void buttonOnClicked(View view) {
 
+
         // Check notification access
         if (!is_enabled)
             is_enabled = IsEnabled();
@@ -364,6 +412,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         // All buttons, which can be pressed AFTER enabling notification access
         ToggleButton toggle;
+        Button btn;
         switch (view.getId()) {
             case R.id.monday:
                 toggle = (ToggleButton) findViewById(view.getId());
@@ -392,10 +441,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             case R.id.sunday:
                 toggle = (ToggleButton) findViewById(view.getId());
                 MonitorService.enabled_day[1] = toggle.isChecked();
-                break;
-
-            case R.id.start_survey:
-
                 break;
 
             case R.id.enable:
@@ -551,7 +596,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         StatusBarNotification[] current = MonitorService.GetCurrentNotifications();
         if (current != null) {
             for (int i = 0; i < current.length; i++) {
-                list = i +" " + current[i].getPackageName() + "\n" + list;
+                list = i + " " + current[i].getPackageName() + "\n" + list;
             }
         }
         return list;
@@ -571,5 +616,179 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void LOG(Object object) {
         Log.i(TAG, TAG_PRE+object);
     }
+
+    public static String HttpRequest(String url_str) {
+        URL url;
+        String response = "";
+        try {
+            url = new URL(url_str);
+
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setReadTimeout(15000);
+            conn.setConnectTimeout(15000);
+            conn.setRequestMethod("POST");
+            conn.setDoInput(true);
+            conn.setDoOutput(true);
+
+
+            OutputStream os = conn.getOutputStream();
+            BufferedWriter writer = new BufferedWriter(
+                    new OutputStreamWriter(os, "UTF-8"));
+
+            writer.flush();
+            writer.close();
+            os.close();
+            int responseCode=conn.getResponseCode();
+
+            if (responseCode == HttpsURLConnection.HTTP_OK) {
+                String line;
+                BufferedReader br=new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                while ((line=br.readLine()) != null) {
+                    response+=line;
+                }
+            }
+            else {
+                response="";
+
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return response;
+    }
+
+    private String getPostDataString(HashMap<String, String> params) throws UnsupportedEncodingException {
+        StringBuilder result = new StringBuilder();
+        boolean first = true;
+        for(Map.Entry<String, String> entry : params.entrySet()){
+            if (first)
+                first = false;
+            else
+                result.append("&");
+
+            result.append(URLEncoder.encode(entry.getKey(), "UTF-8"));
+            result.append("=");
+            result.append(URLEncoder.encode(entry.getValue(), "UTF-8"));
+        }
+
+        return result.toString();
+    }
+
+    private String survey_str;
+
+    private void StartSurvey() {
+
+        String lang = Locale.getDefault().getLanguage();
+
+        survey_str = HttpRequest("https://toimisto.zzz.fi/survey.php?action=survey&lang=" + lang);
+        LOG(survey_str);
+
+        runOnUiThread(new Runnable() {
+            public void run() {
+                ViewSurvey();
+            }
+        });
+    }
+
+    private String answer_url = "";
+    private Thread answer_thread;
+
+    private void AnswerSurvey() {
+
+        RatingBar rb;
+        Switch sw;
+        String ans_str = Secure.getString(getContentResolver(), Secure.ANDROID_ID) + ";";
+
+        try {
+
+            sw = (Switch) findViewById(R.id.q_bool_0);
+            ans_str += (sw.isChecked() ? "1;" : "0;");
+            sw = (Switch) findViewById(R.id.q_bool_1);
+            ans_str += (sw.isChecked() ? "1;" : "0;");
+            sw = (Switch) findViewById(R.id.q_bool_2);
+            ans_str += (sw.isChecked() ? "1;" : "0;");
+
+            rb = (RatingBar) findViewById(R.id.q_rate_0_ans);
+            ans_str += Integer.toString((int)rb.getRating()) + ";";
+            rb = (RatingBar) findViewById(R.id.q_rate_1_ans);
+            ans_str += Integer.toString((int)rb.getRating()) + ";";
+            rb = (RatingBar) findViewById(R.id.q_rate_2_ans);
+            ans_str += Integer.toString((int)rb.getRating()) + ";";
+            rb = (RatingBar) findViewById(R.id.q_rate_3_ans);
+            ans_str += Integer.toString((int)rb.getRating()) + ";";
+            rb = (RatingBar) findViewById(R.id.q_rate_4_ans);
+            ans_str += Integer.toString((int)rb.getRating()) + ";";
+
+            LOG("Answer string: " + ans_str);
+
+            answer_url = "https://toimisto.zzz.fi/survey.php?action=answer&answer=" + URLEncoder.encode(ans_str, "utf-8");
+            LOG("Answer url: " + answer_url);
+
+            answer_thread = new Thread(new Runnable() {
+
+                @Override
+                public void run() {
+                    HttpRequest(answer_url);
+                }
+            });
+
+            answer_thread.start();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        SetMainView();
+    }
+
+    private void ViewSurvey() {
+
+        String[] parts = survey_str.split(";");
+        for (int i = 0; i < parts.length; i++) {
+            LOG(Integer.toString(i) + ": " + parts[i]);
+        }
+
+        if (parts.length != 9) {
+            LOG("ERROR: Survey doesn't have 9 lines");
+            return;
+        }
+
+        TextView tw;
+        Switch sw;
+        Button btn;
+
+        try {
+            setContentView(R.layout.survey);
+
+            tw = (TextView) findViewById(R.id.survey_title);
+            tw.setText(parts[0]);
+            sw = (Switch) findViewById(R.id.q_bool_0);
+            sw.setText(parts[1]);
+            sw = (Switch) findViewById(R.id.q_bool_1);
+            sw.setText(parts[2]);
+            sw = (Switch) findViewById(R.id.q_bool_2);
+            sw.setText(parts[3]);
+            tw = (TextView) findViewById(R.id.q_rate_0);
+            tw.setText(parts[4]);
+            tw = (TextView) findViewById(R.id.q_rate_1);
+            tw.setText(parts[5]);
+            tw = (TextView) findViewById(R.id.q_rate_2);
+            tw.setText(parts[6]);
+            tw = (TextView) findViewById(R.id.q_rate_3);
+            tw.setText(parts[7]);
+            tw = (TextView) findViewById(R.id.q_rate_4);
+            tw.setText(parts[8]);
+
+            btn = (Button) findViewById(R.id.answer_survey);
+            btn.setOnClickListener(this);
+            btn = (Button) findViewById(R.id.survey_back);
+            btn.setOnClickListener(this);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            setContentView(R.layout.activity_main);
+        }
+    }
+
 
 }

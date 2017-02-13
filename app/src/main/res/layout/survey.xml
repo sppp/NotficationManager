@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <LinearLayout
+        xmlns:tools="http://schemas.android.com/tools"
+        tools:context="com.example.user.notficationmanager.MainActivity"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:id="@+id/survey"
+        android:weightSum="1">
+
+
+
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="360dp"
+            android:layout_height="match_parent">
+
+            <TextView
+                android:text="Welcome Text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/survey_title"
+                android:textAlignment="center"
+                android:textSize="24sp" />
+
+            <Switch
+                android:text="boolean question 1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/q_bool_0" />
+
+            <Switch
+                android:text="boolean question 2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/q_bool_1" />
+
+            <Switch
+                android:text="boolean question 3"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/q_bool_2" />
+
+            <TextView
+                android:text="rate question 1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/q_rate_0"
+                android:textColor="@android:color/background_dark" />
+
+            <RatingBar
+                android:layout_height="wrap_content"
+                android:id="@+id/q_rate_0_ans"
+                android:rating="0"
+                android:numStars="5"
+                android:stepSize="1"
+                android:isIndicator="false"
+                android:layout_width="240dp" />
+
+            <TextView
+                android:text="rate question 2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/q_rate_1"
+                android:textColor="@android:color/background_dark" />
+
+            <RatingBar
+                android:layout_width="240dp"
+                android:layout_height="wrap_content"
+                android:id="@+id/q_rate_1_ans"
+                android:rating="0"
+                android:numStars="5"
+                android:stepSize="1" />
+
+            <TextView
+                android:text="rate question 3"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/q_rate_2"
+                android:textColor="@android:color/background_dark" />
+
+            <RatingBar
+                android:layout_width="240dp"
+                android:layout_height="wrap_content"
+                android:id="@+id/q_rate_2_ans"
+                android:rating="0"
+                android:numStars="5"
+                android:stepSize="1" />
+
+            <TextView
+                android:text="rate question 4"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/q_rate_3"
+                android:textColor="@android:color/background_dark" />
+
+            <RatingBar
+                android:layout_width="240dp"
+                android:layout_height="wrap_content"
+                android:id="@+id/q_rate_3_ans"
+                android:rating="0"
+                android:numStars="5"
+                android:stepSize="1" />
+
+            <TextView
+                android:text="rate question 5"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/q_rate_4"
+                android:textColor="@android:color/background_dark" />
+
+            <RatingBar
+                android:layout_width="240dp"
+                android:layout_height="wrap_content"
+                android:id="@+id/q_rate_4_ans"
+                android:rating="0"
+                android:numStars="5"
+                android:stepSize="1" />
+
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <Button
+                    android:text="@string/back"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/survey_back"
+                    android:layout_weight="1" />
+
+                <Button
+                    android:text="@string/answer"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/answer_survey"
+                    android:layout_weight="1" />
+            </LinearLayout>
+
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>
+

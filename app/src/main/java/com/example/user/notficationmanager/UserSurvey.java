@@ -24,7 +24,7 @@ import javax.net.ssl.HttpsURLConnection;
 
 public class UserSurvey  {
 
-    public String url = "https://somecloudserver.com/functionality.jsp";
+    public String url = "https://toimisto.zzz.fi/survey.php";
     public Answer answer;
     public Questionary questionary;
 

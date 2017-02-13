@@ -12,9 +12,11 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
+import android.preference.PreferenceManager;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
 import android.support.v4.app.NotificationCompat;
@@ -51,6 +53,8 @@ public class MonitorService extends NotificationListenerService {
     public static int countdown_end_second = 59;
 
     public static boolean[] enabled_day = new boolean[7];
+
+    private SharedPreferences preferences;
 
     static int GetCountdown() {
         if (!is_enabled) return 0;
@@ -230,6 +234,21 @@ public class MonitorService extends NotificationListenerService {
         // Queuing was disabled, clear existing notifications
         else {
             CancelAll();
+
+            // Store settings
+            SharedPreferences.Editor editor = preferences.edit();
+            editor.putBoolean("saturday", enabled_day[0]);
+            editor.putBoolean("sunday", enabled_day[1]);
+            editor.putBoolean("monday", enabled_day[2]);
+            editor.putBoolean("tuesday", enabled_day[3]);
+            editor.putBoolean("wednesday", enabled_day[4]);
+            editor.putBoolean("thursday", enabled_day[5]);
+            editor.putBoolean("friday", enabled_day[6]);
+            editor.putInt("begin_hour", begin_hour);
+            editor.putInt("begin_minute", begin_minute);
+            editor.putInt("end_hour", end_hour);
+            editor.putInt("end_minute", end_minute);
+            editor.commit();
         }
 
         is_enabled = enabled;
@@ -247,13 +266,26 @@ public class MonitorService extends NotificationListenerService {
     public void onCreate() {
         self = this;
         super.onCreate();
+
+        preferences = PreferenceManager.getDefaultSharedPreferences(this.getApplicationContext());
+
+        enabled_day[0] = preferences.getBoolean("saturday", false);
+        enabled_day[1] = preferences.getBoolean("sunday", false);
+        enabled_day[2] = preferences.getBoolean("monday", true);
+        enabled_day[3] = preferences.getBoolean("tuesday", true);
+        enabled_day[4] = preferences.getBoolean("wednesday", true);
+        enabled_day[5] = preferences.getBoolean("thursday", true);
+        enabled_day[6] = preferences.getBoolean("friday", true);
+        begin_hour = preferences.getInt("begin_hour", 0);
+        begin_minute = preferences.getInt("begin_minute", 0);
+        end_hour = preferences.getInt("end_hour", 23);
+        end_minute = preferences.getInt("end_minute", 59);
+
         IntentFilter filter = new IntentFilter();
         filter.addAction(ACTION_NLS_CONTROL);
         UpdateCurrentNotifications();
 
-        // Add setting slots days
-        for (int i = 0; i < 2; i++) enabled_day[i] = false;
-        for (int i = 2; i < 7; i++) enabled_day[i] = true;
+
 
         // Start periodical refresher
 
@@ -270,8 +302,10 @@ public class MonitorService extends NotificationListenerService {
         // Test listening a notification.
         // After updating to new version, the previous permission is not transferred to the new app,
         // and requires user to re-enable the permission.
-        if (MainActivity.self != null)
+        if (MainActivity.self != null) {
+            MainActivity.self.RefreshData();
             MainActivity.self.TestListenerAndConfirm();
+        }
 
     }
 
