@@ -5,43 +5,36 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
-
 import android.app.Notification;
-import android.app.PendingIntent;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.IBinder;
-import android.os.Message;
 import android.preference.PreferenceManager;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
-import android.support.v4.app.NotificationCompat;
-import android.text.TextUtils;
 import android.util.Log;
 
 
 
-
+/*
+    MonitorService is the background service for listening notifications.
+    It handles the timed delaying and works while MainActivity is paused.
+ */
 public class MonitorService extends NotificationListenerService {
+
+    private SharedPreferences preferences;
+    private static boolean is_enabled = false;
+    private static boolean enable_timer = false;
     private static final String TAG = "MonitorService";
     private static final String TAG_PRE = "[" + MonitorService.class.getSimpleName() + "] ";
-    private static final int EVENT_UPDATE_CURRENT_NOS = 0;
     public static final String ACTION_NLS_CONTROL = "com.example.user.notficationmanager.NLSCONTROL";
     public static List<StatusBarNotification[]> current_notifications = new ArrayList<StatusBarNotification[]>();
     public static int current_notification_count = 0;
     public static StatusBarNotification posted_notification;
-    public static StatusBarNotification removed_notification;
-
     public static List<QueuedNotification> queued_nots = new ArrayList<QueuedNotification>();
     public static MonitorService self;
-
-    private static boolean is_enabled = false;
-    private static boolean enable_timer = false;
-
     public static int begin_hour = 0;
     public static int begin_minute = 0;
     public static int end_hour = 23;
@@ -51,14 +44,17 @@ public class MonitorService extends NotificationListenerService {
     public static int countdown_end_hour = 23;
     public static int countdown_end_minute = 59;
     public static int countdown_end_second = 59;
+    public static boolean[] enabled_day = new boolean[7];// constant
+    public static final long NOTIFY_INTERVAL = 10 * 1000; // 10 seconds
+    private Handler mHandler = new Handler();
+    private Timer mTimer = null;
+    private Notification icon;
+    private int icon_id = 0;
 
-    public static boolean[] enabled_day = new boolean[7];
 
-    private SharedPreferences preferences;
-
+    // GetCountdown returns time in seconds until queue is released.
     static int GetCountdown() {
         if (!is_enabled) return 0;
-
         Calendar c = Calendar.getInstance();
         int second = c.get(Calendar.SECOND);
         int minute = c.get(Calendar.MINUTE);
@@ -67,14 +63,12 @@ public class MonitorService extends NotificationListenerService {
         int end_of_day = enable_timer == false ?
                 end_hour * 60 * 60 + end_minute * 60:
                 countdown_end_hour * 60 * 60 + countdown_end_minute * 60 + countdown_end_second;
-
         int seconds_left = end_of_day - second_of_day;
         if (seconds_left < 0) seconds_left += 24 * 60 * 60;
-
-
         return seconds_left;
     }
 
+    // IsDelaying checks if delaying of notifications is currently active.
     static boolean IsDelaying() {
         if (!is_enabled)
             return false;
@@ -105,17 +99,8 @@ public class MonitorService extends NotificationListenerService {
 
         return false;
     }
-    // TIMER
 
-    // constant
-    public static final long NOTIFY_INTERVAL = 10 * 1000; // 10 seconds
-
-    // run on another Thread to avoid crash
-    private Handler mHandler = new Handler();
-
-    // timer handling
-    private Timer mTimer = null;
-
+    // TimeDisplayTimerTask periodically checks for begin or end of notification delay.
     class TimeDisplayTimerTask extends TimerTask {
 
         @Override
@@ -132,25 +117,26 @@ public class MonitorService extends NotificationListenerService {
         }
     }
 
-
+    // Routine function to check the delaying.
     public void Refresh() {
         LOG("MonitorService Refresh");
 
+        // Release notification queue if delaying is not active.
         if (is_enabled) {
             if (!IsDelaying()) {
                 ReleaseQueue();
             }
         }
 
+        // Show icon in status bar while delaying is active.
         RefreshStatusIcon();
 
+        // Refresh GUI's countdown if it is running. (Could be done in MainActivity thread, but this works too)
         if (MainActivity.self != null)
             MainActivity.self.RefreshCountdown();
     }
 
-    private Notification icon;
-    private int icon_id = 0;
-
+    // RefreshStatusIcon shows icon in status bar while delaying is active.
     public void RefreshStatusIcon() {
         if (IsDelaying()) {
             ShowIcon();
@@ -159,6 +145,7 @@ public class MonitorService extends NotificationListenerService {
         }
     }
 
+    // HideIcon cancels the icon-notification.
     public void HideIcon() {
         if (icon == null) return;
 
@@ -169,6 +156,8 @@ public class MonitorService extends NotificationListenerService {
         icon = null;
     }
 
+    // ShowIcon sends a notification without auto-cancel and with on-going attribute.
+    // The icon notification is not added to the delaying queue.
     public void ShowIcon() {
         if (icon != null) return;
 
@@ -186,18 +175,20 @@ public class MonitorService extends NotificationListenerService {
         nmgr.notify(icon_id, icon);
     }
 
+    // CancelLast removes the last notification.
     public void CancelLast() {
-
         if (posted_notification != null) {
             android.app.NotificationManager notificationManager = (android.app.NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
             notificationManager.cancel(posted_notification.getId());
         }
     }
 
+    // CancelAll removes all open notifications.
     public void CancelAll() {
         cancelAllNotifications();
     }
 
+    // StartTimer starts delaying of notifications instantly, until given time is passed.
     public void StartTimer(int minutes) {
         is_enabled = true;
         enable_timer = true;
@@ -221,16 +212,18 @@ public class MonitorService extends NotificationListenerService {
         RefreshStatusIcon();
     }
 
+    // Enable starts or stops the timed delaying, which uses the begin and end times and weekdays.
     public void Enable(boolean enabled) {
         if (is_enabled == enabled && enable_timer == false) return; // Useless
 
-        // Don't enable countdown
+        // Don't enable instant delaying.
         enable_timer = false;
 
         // Queuing was enabled, release the queue
         if (is_enabled) {
             ReleaseQueue();
         }
+
         // Queuing was disabled, clear existing notifications
         else {
             CancelAll();
@@ -259,16 +252,18 @@ public class MonitorService extends NotificationListenerService {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
+        // Send START_STICKY to left service in "started" state and allow restarting.
         return START_STICKY;
     }
 
+    // onCreate is being called after the service has been created.
     @Override
     public void onCreate() {
         self = this;
         super.onCreate();
 
+        // Get persistent settings
         preferences = PreferenceManager.getDefaultSharedPreferences(this.getApplicationContext());
-
         enabled_day[0] = preferences.getBoolean("saturday", false);
         enabled_day[1] = preferences.getBoolean("sunday", false);
         enabled_day[2] = preferences.getBoolean("monday", true);
@@ -281,22 +276,13 @@ public class MonitorService extends NotificationListenerService {
         end_hour = preferences.getInt("end_hour", 23);
         end_minute = preferences.getInt("end_minute", 59);
 
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(ACTION_NLS_CONTROL);
-        UpdateCurrentNotifications();
-
-
 
         // Start periodical refresher
-
-        // cancel if already existed
         if(mTimer != null) {
             mTimer.cancel();
         } else {
-            // recreate new
             mTimer = new Timer();
         }
-        // schedule task
         mTimer.scheduleAtFixedRate(new TimeDisplayTimerTask(), 0, NOTIFY_INTERVAL);
 
         // Test listening a notification.
@@ -309,6 +295,7 @@ public class MonitorService extends NotificationListenerService {
 
     }
 
+    // These functions are here to avoid some weird bug, which is now unfortunately forgotten.
     @Override
     public void onDestroy() {
         super.onDestroy();
@@ -319,14 +306,19 @@ public class MonitorService extends NotificationListenerService {
         return super.onBind(intent);
     }
 
+
+    // onNotificationPosted is being called when the application has permission to listen notifications
+    // and a notification is posted to the system.
+    // In older Android systems (< 23 API) the notification have already been shown to the user,
+    // and it is too late to cancel them in this point.
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
 
-        // Skip our service's notification
+        // Skip this service's notification
         if (sbn.getId() == icon_id)
             return;
 
-
+        // If delaying is active, then add the notification to the queue and cancel current notification.
         if (IsDelaying()) {
             QueuedNotification qn = new QueuedNotification();
             qn.Set(sbn);
@@ -341,13 +333,32 @@ public class MonitorService extends NotificationListenerService {
         posted_notification = sbn;
     }
 
+    // ReleaseQueue shows all delayed notifications.
+    public void ReleaseQueue() {
+        LOG("Releasing Queue");
 
-    @Override
-    public void onNotificationRemoved(StatusBarNotification sbn) {
-        UpdateCurrentNotifications();
-        removed_notification = sbn;
+        // Get notifications to separate list to avoid getting pushed notifications into queue gain.
+        List<Notification> release_list = new ArrayList<Notification>();
+        for (int i = 0; i < queued_nots.size(); i++) {
+            QueuedNotification qn = queued_nots.get(i);
+            Notification not = qn.Get();
+            release_list.add(not);
+        }
+
+        // Show all queued notifications
+        android.app.NotificationManager nmgr = (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        for (int i = 0; i < release_list.size(); i++) {
+            nmgr.notify((int)System.currentTimeMillis(), release_list.get(i));
+        }
+
+        // Queue might have been re-filled with notifications, so clear it again.
+        // This is not clean as it could be, as re-filling could be avoided with other means, but it works.
+        queued_nots.clear();
+
     }
 
+    // UpdateCurrentNotifications gets the current notification list, which is required for
+    // testing the listening of notifications.
     private void UpdateCurrentNotifications() {
         try {
             StatusBarNotification[] activeNos = getActiveNotifications();
@@ -365,6 +376,7 @@ public class MonitorService extends NotificationListenerService {
         }
     }
 
+    // GetCurrentNotifications returns the current list of notifications.
     public static StatusBarNotification[] GetCurrentNotifications() {
         if (current_notifications.size() == 0) {
             return null;
@@ -372,24 +384,8 @@ public class MonitorService extends NotificationListenerService {
         return current_notifications.get(0);
     }
 
-    public void ReleaseQueue() {
-        LOG("Releasing Queue");
-        List<Notification> release_list = new ArrayList<Notification>();
-        for (int i = 0; i < queued_nots.size(); i++) {
-            QueuedNotification qn = queued_nots.get(i);
-            Notification not = qn.Get();
-            release_list.add(not);
-        }
 
-        android.app.NotificationManager nmgr = (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-
-        for (int i = 0; i < release_list.size(); i++) {
-            nmgr.notify((int)System.currentTimeMillis(), release_list.get(i));
-        }
-
-        queued_nots.clear();
-
-    }
+    // Utility function for logging purposes.
     private static void LOG(Object object) {
         Log.i(TAG, TAG_PRE+object);
     }

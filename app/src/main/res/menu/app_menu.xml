@@ -1,31 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
-        android:title="@string/menu_help"
-        android:id="@+id/bar_help"
-        />
-    <item
         android:title="@string/menu_perm"
         android:id="@+id/sys_perms"
         />
     <item
-        android:title="Debug: create test notification"
+        android:title="@string/debug_testnot"
         android:id="@+id/dbg_create_test"
         />
     <item
-        android:title="Debug: remove last notification"
+        android:title="@string/debug_removelast"
         android:id="@+id/dbg_remove_last"
         />
     <item
-        android:title="Debug: cancel all notifications"
+        android:title="@string/debug_cancelall"
         android:id="@+id/dbg_cancel_all"
         />
     <item
-        android:title="Debug: dump verbose log"
+        android:title="@string/debug_dumplog"
         android:id="@+id/dbg_dump"
         />
     <item
-        android:title="Debug: release queue"
+        android:title="@string/debug_release"
         android:id="@+id/dbg_release"
         />
 </menu>

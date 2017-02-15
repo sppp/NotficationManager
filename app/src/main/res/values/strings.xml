@@ -21,6 +21,11 @@
     <string name="popup_60">1 hour</string>
     <string name="answer">Answer</string>
     <string name="back">Back</string>
+    <string name="debug_testnot">Debug: create test notification</string>
+    <string name="debug_removelast">Debug: remove last notification</string>
+    <string name="debug_cancelall">Debug: cancel all notifications</string>
+    <string name="debug_dumplog">Debug: dump verbose log</string>
+    <string name="debug_release">Debug: release queue</string>
 
 
 

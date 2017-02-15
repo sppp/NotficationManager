@@ -5,7 +5,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.media.Rating;
 import android.os.Handler;
 import android.provider.Settings;
 import android.service.notification.StatusBarNotification;
@@ -13,7 +12,6 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.app.NotificationCompat;
-import android.support.v7.widget.ListPopupWindow;
 import android.support.v7.widget.PopupMenu;
 import android.text.TextUtils;
 import android.util.Log;
@@ -21,93 +19,81 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.RatingBar;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.TimePicker;
-import android.widget.Toast;
 import android.widget.ToggleButton;
 import android.provider.Settings.Secure;
-
-import com.example.user.notficationmanager.R;
-
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.util.Calendar;
-import java.util.HashMap;
 import java.util.Locale;
-import java.util.Map;
-
 import javax.net.ssl.HttpsURLConnection;
 
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener, PopupMenu.OnMenuItemClickListener {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener, PopupMenu.OnMenuItemClickListener {
 
+    // Access MainActivity object from global context to keep things simple enough
     static public MainActivity self;
 
+    // Used variables
+    private Handler countdown_handler = new Handler();
     private EditText countdown;
     private EditText begin;
     private EditText end;
     private TextView start_survey;
-    private Button delay_now;
-
     private int begin_hour = 0;
     private int begin_minute = 0;
     private int end_hour = 23;
     private int end_minute = 59;
     private int view_type = 0;
+    private int countdown_delay = 500; //milliseconds
+    private boolean is_enabled = false;
+    private String survey_str = "";
+    private String answer_url = "";
+    private Thread answer_thread;
+    private Thread survey_thread;
 
+
+    // Tags for logging purposes
     private static final String TAG = "Notification Delayer";
     private static final String TAG_PRE = "["+MainActivity.class.getSimpleName()+"] ";
     private static final String ENABLED_LISTENERS = "enabled_notification_listeners";
     private static final String ACTION_SETTINGS = "android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS";
-    private static final int EVENT_SHOW_CREATE = 0;
-    private static final int EVENT_LIST_CURRENT = 1;
-    private boolean is_enabled = false;
-    private boolean check_service = false;
 
-    private Handler countdown_handler = new Handler();
-    int countdown_delay = 500; //milliseconds
 
-    //private Calendar calendar = Calendar.getInstance();
-
-    private final String[] helps = {"Q: How do I add a new application to the notification manager?\n" +
-            "\n" +
-            "A: Press manage apps at the bottom of the main screen and choose the applications which notifications you want to manage.", "Q: How do I disable the notification management?\n" +
-            "\n" +
-            "A: Press the off button in the main screen."};
-
+    // Refresh countdown label, which shows how much time is left before notifications are released
     void RefreshCountdown() {
+
+        // Require running service
         if (MonitorService.self == null)
             return;
 
+        // Update time only if delaying is currently active
         if (MonitorService.IsDelaying()) {
 
+            // Get components of countdown time
             int seconds_left = MonitorService.self.GetCountdown();
-
             int hour_left = seconds_left / 60 / 60;
             int minute_left = (seconds_left / 60) % 60;
             int second_left = seconds_left % 60;
 
+            // Get countdown time as string
             String countdown_str =
                     Integer.toString(hour_left) + ":" +
                     (minute_left < 10 ? "0" : "") + Integer.toString(minute_left) + ":" +
                     (second_left < 10 ? "0" : "") + Integer.toString(second_left);
             countdown.setText(countdown_str);
 
-            // Call this function again
+            // Call this RefreshCountdown function periodically while delaying is active
             countdown_handler.postDelayed(new Runnable() {
                 public void run() {
                     if (MainActivity.self != null)
@@ -116,18 +102,21 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }, countdown_delay);
         }
         else {
+
+            // Reset label and don't call this function again
             countdown.setText("0:00");
         }
     }
 
+    // onCreate is the first function to be called and it sets the main view.
     protected void onCreate(Bundle savedInstanceState) {
         self = this;
-
         super.onCreate(savedInstanceState);
-
         SetMainView();
     }
 
+    // SetMainView gets references to GUI widgets and sets their functionality.
+    // Xml attributes could also be used.
     private void SetMainView() {
         setContentView(R.layout.activity_main);
 
@@ -136,24 +125,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         begin = (EditText) findViewById(R.id.begin);
         begin.setOnClickListener(this);
-        begin.setOnLongClickListener(this);
 
         end = (EditText) findViewById(R.id.end);
         end.setOnClickListener(this);
-        end.setOnLongClickListener(this);
-
-        delay_now = (Button) findViewById(R.id.delay_now);
 
         start_survey = (TextView) findViewById(R.id.start_survey);
         start_survey.setOnClickListener(this);
 
+        // Check that background service is running and start it if it's not.
         if (MonitorService.self == null) {
             startService(new Intent(MainActivity.this, MonitorService.class));
         }
 
+        // Refresh labels in the GUI
         RefreshData();
     }
 
+    // Reset reference to this object when closing the application, so background service doesn't use it.
     @Override
     protected void onPause() {
         super.onPause();
@@ -163,6 +151,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     }
 
+    // Test if the application has permissions to listen notification and prompt user if not.
+    // Also, the permission becomes invalid when the application is being upgraded, so
+    // check that the listening works by sending test notification and checking that it is received.
     public void TestListenerAndConfirm() {
         is_enabled = IsEnabled();
         if (!is_enabled) {
@@ -173,29 +164,30 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    // Refresh GUI widgets when the application window have been restored.
     @Override
     protected void onResume() {
         super.onResume();
+
+        // Check permissions once again.
         is_enabled = IsEnabled();
         if (!is_enabled) {
             ShowConfirmDialog(false);
         }
         else {
-            // Restart service (crashes)
-            //if (check_service == true && MonitorService.self == null) {
+            // Start service if it is not running.
             if (MonitorService.self == null) {
                 startService(new Intent(MainActivity.this, MonitorService.class));
-                check_service = false;
             }
         }
 
+        // Refresh GUI widgets
         DefaultSettings();
         RefreshData();
     }
 
 
-    private Thread survey_thread;
-
+    // The function to handle clicking interaction.
     @Override
     public void onClick(View view) {
         if (view == this.begin) {
@@ -229,6 +221,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    // Default settings are values that are being set while service is starting and
+    // stored settings haven't been loaded yet. This is optional.
     public void DefaultSettings() {
         ToggleButton toggle;
         toggle = (ToggleButton) findViewById(R.id.monday);
@@ -242,6 +236,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         toggle = (ToggleButton) findViewById(R.id.friday);
         toggle.setChecked(true);
     }
+
+    // RefreshData sets the value of GUI widgets.
+    // It loads settings from background service, which have loaded settings from persistent storage.
     public void RefreshData() {
         if (MonitorService.self == null)
             return;
@@ -272,6 +269,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
 
+    // Function to handle new begin/end time of day for notification delaying.
     TimePickerDialog.OnTimeSetListener time = new TimePickerDialog.OnTimeSetListener() {
         public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
             if (view_type == 0) {
@@ -289,20 +287,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     };
 
-
-    @Override
-    public boolean onLongClick(View view) {
-        /*
-        //TODO: käytä @string/ohje tjsp
-        if (view == this.begin || view == this.end) {
-            Toast.makeText(view.getContext(), "Use the format date/month/year to enter the dates when you want to delay your notifications", Toast.LENGTH_SHORT).show();
-            return true;
-        } else {
-            return false;
-        }*/
-        return false;
-    }
-
+    // showPopup function shows the "Delay Now" menu
     public void showPopup(View v) {
         PopupMenu popup = new PopupMenu(this, v);
         MenuInflater inflater = popup.getMenuInflater();
@@ -311,6 +296,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         popup.show();
     }
 
+    // onMenuItemClick function handles the functionality of "Delay Now" menu items.
     @Override
     public boolean onMenuItemClick(MenuItem item) {
         switch (item.getItemId()) {
@@ -328,6 +314,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    // StartTimerDelay function handles the "Delay Now" functionality.
     public void StartTimerDelay(int minutes) {
         int hours = minutes / 60;
         minutes = minutes % 60;
@@ -337,23 +324,21 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         countdown.setText(timestr);
         MonitorService.self.StartTimer(minutes);
         RefreshCountdown();
-
         ToggleButton toggle = (ToggleButton) findViewById(R.id.enable);
         toggle.setChecked(true);
     }
 
+    // onCreateOptionsMenu enables the main menu of the application.
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.app_menu, menu);
         return true;
     }
 
+    // onOptionsItemSelected handles the functionality of the main menu.
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
-            case R.id.bar_help:
-                displayHelpList();
-                return true;
             case R.id.dbg_create_test:
                 DebugCreateNotification(this);
                 return true;
@@ -377,43 +362,31 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    void displayHelpList() {
-        ListPopupWindow helpList;
-        helpList = new ListPopupWindow(MainActivity.this);
-        helpList.setAdapter(new ArrayAdapter(
-                MainActivity.this,
-                R.layout.help, helps));
-        helpList.setAnchorView(countdown);
-        helpList.setWidth(800);
-        helpList.setHeight(600);
-
-        helpList.setModal(true);
-        helpList.show();
-    }
-
-
+    // getResString gets the translated text
     public String getResString(String name) {
         Context context = this;
         return getString(context.getResources().getIdentifier(name, "string", context.getPackageName()));
     }
 
+    // buttonOnClicked handles the functionality of GUI buttons.
     public void buttonOnClicked(View view) {
-
 
         // Check notification access
         if (!is_enabled)
             is_enabled = IsEnabled();
 
+        // All buttons requires service running in the background.
         if (MonitorService.self == null) {
             LOG("Unknown error in MonitorService");
             startService(new Intent(MainActivity.this, MonitorService.class));
             return;
         }
 
-        // All buttons, which can be pressed AFTER enabling notification access
         ToggleButton toggle;
         Button btn;
         switch (view.getId()) {
+
+            // ToggleButtons for weekdays.
             case R.id.monday:
                 toggle = (ToggleButton) findViewById(view.getId());
                 MonitorService.enabled_day[2] = toggle.isChecked();
@@ -443,6 +416,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 MonitorService.enabled_day[1] = toggle.isChecked();
                 break;
 
+            // The main "Enable" button for timed delaying.
             case R.id.enable:
                 toggle = (ToggleButton) findViewById(view.getId());
                 if (toggle.isChecked()) {
@@ -459,6 +433,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    // SetTimerange assigns GUI's settings to service's settings.
     void SetTimerange() {
         MonitorService.self.begin_hour = begin_hour;
         MonitorService.self.begin_minute = begin_minute;
@@ -482,10 +457,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         MonitorService.self.enabled_day[1] = toggle.isChecked();
     }
 
+    // IsEnabled checks that the application has permissions to listen notifications.
     private boolean IsEnabled() {
         String name = getPackageName();
-        final String flat = Settings.Secure.getString(getContentResolver(),
-                ENABLED_LISTENERS);
+        final String flat = Settings.Secure.getString(getContentResolver(), ENABLED_LISTENERS);
         if (!TextUtils.isEmpty(flat)) {
             final String[] names = flat.split(":");
             for (int i = 0; i < names.length; i++) {
@@ -500,12 +475,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         return false;
     }
 
-
-    Handler test_listener_handler = new Handler();
-    int test_listener_counter;
-
+    // TestListener tests that listening really works by sending a notification and checking that it is received.
     private boolean TestListener() {
 
+        // Create a test notification
         android.app.NotificationManager nmgr = (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         NotificationCompat.Builder ncomp = new NotificationCompat.Builder(this);
         ncomp.setContentTitle(getResString("app_name"));
@@ -516,14 +489,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         int id = (int) System.currentTimeMillis();
         nmgr.notify(id, ncomp.build());
 
+        // Require non-empty notification list
         boolean success = GetCurrentNotificationString() != "";
 
+        // Cancel the test notification
         android.app.NotificationManager notificationManager = (android.app.NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
         notificationManager.cancel(id);
+
         return success;
     }
 
-
+    // DebugCreateNotification creates a test notification for debugging purposes.
     private void DebugCreateNotification(Context context) {
         android.app.NotificationManager nmgr = (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         NotificationCompat.Builder ncomp = new NotificationCompat.Builder(this);
@@ -535,22 +511,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         nmgr.notify((int)System.currentTimeMillis(), ncomp.build());
     }
 
-    private void DebugCommand(Context context, String cmd) {
-        Intent intent = new Intent();
-        intent.setAction(MonitorService.ACTION_NLS_CONTROL);
-        intent.putExtra("command", cmd);
-        context.sendBroadcast(intent);
-    }
-
-
+    // OpenNotificationAccess opens the notification listening permissions window.
     private void OpenNotificationAccess() {
-
-        // Check service after settings
-        check_service = true;
-
         startActivity(new Intent(ACTION_SETTINGS));
     }
 
+    // ShowConfirmDialog requests user to give this application the permission for listening notifications.
     private void ShowConfirmDialog(boolean re_enable_msg) {
         new AlertDialog.Builder(this)
                 .setMessage(
@@ -575,6 +541,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 .create().show();
     }
 
+    // Remove latest notification for debugging purposes.
     private void RemoveLastNotification() {
         if (is_enabled) {
             MonitorService.self.CancelLast();
@@ -583,6 +550,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    // Clear all notifications for debugging purposes.
     private void ClearAllNotifications() {
         if (is_enabled) {
             MonitorService.self.CancelAll();
@@ -591,6 +559,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    // Get raw text about all active notifications for debugging purposes and for testing listening.
     private String GetCurrentNotificationString() {
         String list = "";
         StatusBarNotification[] current = MonitorService.GetCurrentNotifications();
@@ -602,6 +571,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         return list;
     }
 
+    // Put list of all notifications to console for debugging purposes.
     private void ListCurrentNotification() {
         if (is_enabled) {
             if (MonitorService.GetCurrentNotifications() == null)
@@ -613,10 +583,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    // Easy-to-use logging function
     private void LOG(Object object) {
         Log.i(TAG, TAG_PRE+object);
     }
 
+    // Utility function for fecthing webpage.
     public static String HttpRequest(String url_str) {
         URL url;
         String response = "";
@@ -629,7 +601,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             conn.setRequestMethod("POST");
             conn.setDoInput(true);
             conn.setDoOutput(true);
-
 
             OutputStream os = conn.getOutputStream();
             BufferedWriter writer = new BufferedWriter(
@@ -657,30 +628,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         return response;
     }
 
-    private String getPostDataString(HashMap<String, String> params) throws UnsupportedEncodingException {
-        StringBuilder result = new StringBuilder();
-        boolean first = true;
-        for(Map.Entry<String, String> entry : params.entrySet()){
-            if (first)
-                first = false;
-            else
-                result.append("&");
-
-            result.append(URLEncoder.encode(entry.getKey(), "UTF-8"));
-            result.append("=");
-            result.append(URLEncoder.encode(entry.getValue(), "UTF-8"));
-        }
-
-        return result.toString();
-    }
-
-    private String survey_str;
-
+    // StartSurvey starts the switching to the survey view by requesting survey questions first.
     private void StartSurvey() {
 
         String lang = Locale.getDefault().getLanguage();
 
         survey_str = HttpRequest("https://toimisto.zzz.fi/survey.php?action=survey&lang=" + lang);
+        if (survey_str == "") return;
         LOG(survey_str);
 
         runOnUiThread(new Runnable() {
@@ -690,9 +644,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
     }
 
-    private String answer_url = "";
-    private Thread answer_thread;
-
+    // AnswerSurvey gets the survey answer values from the GUI and sends them to the server.
     private void AnswerSurvey() {
 
         RatingBar rb;
@@ -721,9 +673,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
             LOG("Answer string: " + ans_str);
 
+            // Encode answer string to the url
             answer_url = "https://toimisto.zzz.fi/survey.php?action=answer&answer=" + URLEncoder.encode(ans_str, "utf-8");
             LOG("Answer url: " + answer_url);
 
+            // Networking must be done in non-GUI thread.
             answer_thread = new Thread(new Runnable() {
 
                 @Override
@@ -731,16 +685,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     HttpRequest(answer_url);
                 }
             });
-
             answer_thread.start();
 
         } catch (Exception e) {
             e.printStackTrace();
         }
 
+        // Switch back to the main view
         SetMainView();
     }
 
+    // ViewSurvey switches main view to the survey view and sets received survey questions to labels.
     private void ViewSurvey() {
 
         String[] parts = survey_str.split(";");
@@ -789,6 +744,4 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             setContentView(R.layout.activity_main);
         }
     }
-
-
 }

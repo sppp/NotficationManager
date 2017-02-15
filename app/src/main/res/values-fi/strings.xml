@@ -22,4 +22,9 @@
     <string name="short_wednesday">K</string>
     <string name="answer">Vastaa</string>
     <string name="back">Peruuta</string>
+    <string name="debug_cancelall">Kehittäjät: peruuta kaikki huomautukset</string>
+    <string name="debug_dumplog">Kehittäjät: kirjoita logiin tila</string>
+    <string name="debug_release">Kehittäjät: vapauta huomautus-jono</string>
+    <string name="debug_removelast">Kehittäjät: poista viimeisin huomautus</string>
+    <string name="debug_testnot">Kehittäjät: luo testihuomautus</string>
 </resources>
